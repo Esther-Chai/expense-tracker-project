@@ -5,153 +5,222 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Expense Tracker</title>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <script src="config.js"></script>  <!-- API URL config — swap for prod -->
   <style>
     :root {
-      --bg: #0f0f0f; --surface: #1a1a1a; --border: #2a2a2a;
-      --accent: #c8f135; --text: #f0f0f0; --muted: #666;
-      --danger: #ff5c5c; --info: #35c8f1;
+      --bg:#0f0f0f; --surface:#1a1a1a; --border:#2a2a2a;
+      --accent:#c8f135; --text:#f0f0f0; --muted:#666;
+      --danger:#ff5c5c; --info:#35c8f1;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Syne', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 2rem 1rem; }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Syne',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
 
-    header { max-width: 960px; margin: 0 auto 2rem; display: flex; align-items: flex-end; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 1.2rem; }
-    header h1 { font-size: 2rem; font-weight: 800; letter-spacing: -1px; }
-    header h1 span { color: var(--accent); }
-    #total-badge { font-family: 'DM Mono', monospace; font-size: 0.85rem; background: var(--surface); border: 1px solid var(--border); padding: 0.4rem 0.9rem; border-radius: 999px; color: var(--accent); }
+    /* ── Auth screen ── */
+    #auth-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:1rem;}
+    .auth-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:2rem;width:100%;max-width:380px;}
+    .auth-card h1{font-size:1.6rem;font-weight:800;margin-bottom:0.3rem;}
+    .auth-card h1 span{color:var(--accent);}
+    .auth-tabs{display:flex;gap:0.5rem;margin:1.2rem 0;}
+    .auth-tab{flex:1;padding:0.5rem;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'Syne',sans-serif;font-weight:600;font-size:0.82rem;cursor:pointer;transition:all .15s;}
+    .auth-tab.active{background:var(--accent);color:#0f0f0f;border-color:var(--accent);}
+    .auth-error{color:var(--danger);font-size:0.8rem;margin-bottom:0.8rem;display:none;}
+    .auth-error.show{display:block;}
 
-    .layout { max-width: 960px; margin: 0 auto; display: grid; grid-template-columns: 300px 1fr; gap: 1.5rem; align-items: start; }
-    .sidebar { display: flex; flex-direction: column; gap: 1.2rem; }
+    /* ── App screen ── */
+    #app-screen{display:none;padding:2rem 1rem;}
+    header{max-width:960px;margin:0 auto 2rem;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);padding-bottom:1.2rem;}
+    header h1{font-size:1.8rem;font-weight:800;letter-spacing:-1px;}
+    header h1 span{color:var(--accent);}
+    .header-right{display:flex;align-items:center;gap:0.8rem;}
+    #user-name{font-size:0.8rem;color:var(--muted);}
+    #total-badge{font-family:'DM Mono',monospace;font-size:0.82rem;background:var(--surface);border:1px solid var(--border);padding:0.35rem 0.85rem;border-radius:999px;color:var(--accent);}
+    #logout-btn{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'Syne',sans-serif;font-size:0.75rem;padding:0.35rem 0.75rem;border-radius:8px;cursor:pointer;}
+    #logout-btn:hover{border-color:var(--danger);color:var(--danger);}
 
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.3rem; }
-    .card-title { font-size: 0.68rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 1rem; }
+    .layout{max-width:960px;margin:0 auto;display:grid;grid-template-columns:300px 1fr;gap:1.5rem;align-items:start;}
+    .sidebar{display:flex;flex-direction:column;gap:1.2rem;}
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.3rem;}
+    .card-title{font-size:0.68rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:1rem;}
 
-    .form-group { margin-bottom: 0.8rem; }
-    label { display: block; font-size: 0.7rem; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 0.35rem; }
-    input, select { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); font-family: 'DM Mono', monospace; font-size: 0.85rem; padding: 0.5rem 0.7rem; border-radius: 8px; outline: none; transition: border-color 0.2s; }
-    input:focus, select:focus { border-color: var(--accent); }
-    select option { background: var(--surface); }
+    /* ── Form elements ── */
+    .form-group{margin-bottom:0.8rem;}
+    label{display:block;font-size:0.7rem;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:0.35rem;}
+    input,select{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'DM Mono',monospace;font-size:0.85rem;padding:0.5rem 0.7rem;border-radius:8px;outline:none;transition:border-color .2s;}
+    input:focus,select:focus{border-color:var(--accent);}
+    select option{background:var(--surface);}
 
-    #add-btn { width: 100%; margin-top: 0.3rem; background: var(--accent); color: #0f0f0f; border: none; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.85rem; padding: 0.6rem; border-radius: 8px; cursor: pointer; transition: opacity 0.15s; }
-    #add-btn:hover { opacity: 0.85; }
+    .btn-primary{width:100%;background:var(--accent);color:#0f0f0f;border:none;font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;padding:0.6rem;border-radius:8px;cursor:pointer;transition:opacity .15s;}
+    .btn-primary:hover{opacity:0.85;}
+    .btn-primary:disabled{opacity:0.5;cursor:not-allowed;}
+    .btn-outline-info{width:100%;background:transparent;color:var(--info);border:1px solid var(--info);font-family:'Syne',sans-serif;font-weight:600;font-size:0.8rem;padding:0.5rem;border-radius:8px;cursor:pointer;transition:all .15s;margin-top:0.3rem;}
+    .btn-outline-info:hover{background:var(--info);color:#0f0f0f;}
+    .btn-clear{width:100%;background:transparent;color:var(--muted);border:1px solid var(--border);font-family:'Syne',sans-serif;font-size:0.75rem;padding:0.4rem;border-radius:8px;cursor:pointer;margin-top:0.4rem;}
+    .btn-export{width:100%;background:transparent;color:var(--accent);border:1px solid var(--accent);font-family:'Syne',sans-serif;font-weight:600;font-size:0.8rem;padding:0.55rem;border-radius:8px;cursor:pointer;transition:all .15s;}
+    .btn-export:hover{background:var(--accent);color:#0f0f0f;}
 
-    /* Date filter */
-    #form-group-date input { width: 80%; }
-    .date-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.0rem; }
-    #filter-btn { width: 100%; margin-top: 0.3rem; background: transparent; color: var(--info); border: 1px solid var(--info); font-family: 'Syne', sans-serif; font-weight: 600; font-size: 0.8rem; padding: 0.5rem; border-radius: 8px; cursor: pointer; transition: all 0.15s; }
-    #filter-btn:hover { background: var(--info); color: #0f0f0f; }
-    #clear-filter { width: 100%; margin-top: 0.4rem; background: transparent; color: var(--muted); border: 1px solid var(--border); font-family: 'Syne', sans-serif; font-size: 0.75rem; padding: 0.4rem; border-radius: 8px; cursor: pointer; }
-    #clear-filter:hover { color: var(--text); border-color: var(--muted); }
+    .date-row{display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;}
 
-    /* Summary */
-    .summary-row { display: flex; justify-content: space-between; align-items: center; padding: 0.45rem 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
-    .summary-row:last-child { border-bottom: none; }
-    .cat-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 0.5rem; }
-    .summary-amount { font-family: 'DM Mono', monospace; font-size: 0.82rem; color: var(--accent); }
+    /* ── Summary ── */
+    .summary-row{display:flex;justify-content:space-between;align-items:center;padding:0.45rem 0;border-bottom:1px solid var(--border);font-size:0.85rem;}
+    .summary-row:last-child{border-bottom:none;}
+    .cat-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:0.5rem;}
+    .summary-amount{font-family:'DM Mono',monospace;font-size:0.82rem;color:var(--accent);}
 
-    /* Export */
-    #export-btn { width: 100%; background: transparent; color: var(--accent); border: 1px solid var(--accent); font-family: 'Syne', sans-serif; font-weight: 600; font-size: 0.8rem; padding: 0.55rem; border-radius: 8px; cursor: pointer; transition: all 0.15s; }
-    #export-btn:hover { background: var(--accent); color: #0f0f0f; }
+    /* ── Filter bar ── */
+    .filter-bar{display:flex;gap:0.45rem;margin-bottom:1rem;flex-wrap:wrap;}
+    .filter-btn{font-family:'Syne',sans-serif;font-size:0.73rem;font-weight:600;padding:0.3rem 0.8rem;border-radius:999px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;}
+    .filter-btn:hover{border-color:var(--accent);color:var(--accent);}
+    .filter-btn.active{background:var(--accent);color:#0f0f0f;border-color:var(--accent);}
 
-    /* Filter bar */
-    .filter-bar { display: flex; gap: 0.45rem; margin-bottom: 1rem; flex-wrap: wrap; }
-    .filter-btn { font-family: 'Syne', sans-serif; font-size: 0.73rem; font-weight: 600; padding: 0.3rem 0.8rem; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; transition: all 0.15s; }
-    .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
-    .filter-btn.active { background: var(--accent); color: #0f0f0f; border-color: var(--accent); }
+    /* ── Expense list ── */
+    #expense-list{display:flex;flex-direction:column;gap:0.55rem;}
+    .expense-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;display:flex;align-items:center;gap:0.8rem;animation:fadeIn .2s ease;}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+    .cat-pill{font-size:0.63rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:0.22rem 0.55rem;border-radius:999px;white-space:nowrap;flex-shrink:0;}
+    .expense-info{flex:1;min-width:0;}
+    .expense-title{font-weight:600;font-size:0.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .expense-date{font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--muted);margin-top:2px;}
+    .expense-amount{font-family:'DM Mono',monospace;font-size:0.92rem;flex-shrink:0;}
+    .action-btn{background:none;border:none;color:var(--muted);font-size:0.9rem;cursor:pointer;padding:0.2rem 0.35rem;border-radius:5px;transition:color .15s,background .15s;flex-shrink:0;}
+    .action-btn:hover.edit{color:var(--info);background:rgba(53,200,241,0.1);}
+    .action-btn:hover.del{color:var(--danger);background:rgba(255,92,92,0.1);}
+    .empty-state{text-align:center;color:var(--muted);font-size:0.85rem;padding:2rem 0;}
 
-    /* Expense items */
-    #expense-list { display: flex; flex-direction: column; gap: 0.55rem; }
-    .expense-item { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.85rem 1rem; display: flex; align-items: center; gap: 0.8rem; animation: fadeIn 0.2s ease; }
-    @keyframes fadeIn { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
-    .cat-pill { font-size: 0.63rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; padding: 0.22rem 0.55rem; border-radius: 999px; white-space: nowrap; flex-shrink: 0; }
-    .expense-info { flex: 1; min-width: 0; }
-    .expense-title { font-weight: 600; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .expense-date { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--muted); margin-top: 2px; }
-    .expense-amount { font-family: 'DM Mono', monospace; font-size: 0.92rem; flex-shrink: 0; }
-    .action-btn { background: none; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; padding: 0.2rem 0.35rem; border-radius: 5px; transition: color 0.15s, background 0.15s; flex-shrink: 0; }
-    .action-btn:hover.edit  { color: var(--info); background: rgba(53,200,241,0.1); }
-    .action-btn:hover.del   { color: var(--danger); background: rgba(255,92,92,0.1); }
+    /* ── Edit modal ── */
+    .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:50;}
+    .modal-bg.hidden{display:none;}
+    .modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.5rem;width:340px;}
+    .modal h3{font-size:1rem;font-weight:700;margin-bottom:1.1rem;}
+    .modal-actions{display:flex;gap:0.6rem;margin-top:0.8rem;}
+    .modal-actions button{flex:1;padding:0.55rem;border-radius:8px;font-family:'Syne',sans-serif;font-weight:600;font-size:0.82rem;cursor:pointer;border:none;}
+    #save-edit-btn{background:var(--accent);color:#0f0f0f;}
+    #cancel-edit-btn{background:transparent;color:var(--muted);border:1px solid var(--border)!important;}
 
-    /* Edit modal */
-    .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 50; }
-    .modal-bg.hidden { display: none; }
-    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem; width: 340px; }
-    .modal h3 { font-size: 1rem; font-weight: 700; margin-bottom: 1.1rem; }
-    .modal-actions { display: flex; gap: 0.6rem; margin-top: 0.8rem; }
-    .modal-actions button { flex: 1; padding: 0.55rem; border-radius: 8px; font-family: 'Syne', sans-serif; font-weight: 600; font-size: 0.82rem; cursor: pointer; border: none; }
-    #save-edit-btn  { background: var(--accent); color: #0f0f0f; }
-    #cancel-edit-btn { background: transparent; color: var(--muted); border: 1px solid var(--border) !important; }
+    /* ── Toast ── */
+    .toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--surface);border:1px solid var(--accent);color:var(--accent);font-size:0.8rem;font-weight:600;padding:0.6rem 1rem;border-radius:8px;opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none;z-index:99;}
+    .toast.show{opacity:1;transform:translateY(0);}
 
-    .empty-state { text-align: center; color: var(--muted); font-size: 0.85rem; padding: 2rem 0; }
-    .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: var(--surface); border: 1px solid var(--accent); color: var(--accent); font-size: 0.8rem; font-weight: 600; padding: 0.6rem 1rem; border-radius: 8px; opacity: 0; transform: translateY(8px); transition: all 0.25s; pointer-events: none; z-index: 99; }
-    .toast.show { opacity: 1; transform: translateY(0); }
-    .date-active { border-color: var(--info) !important; color: var(--info) !important; }
+    /* ── Category management ── */
+    .cat-manage-row{display:flex;align-items:center;gap:0.5rem;padding:0.45rem 0;border-bottom:1px solid var(--border);}
+    .cat-manage-row:last-child{border-bottom:none;}
+    .cat-manage-name{flex:1;font-size:0.85rem;}
+    .cat-del-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.85rem;padding:0.15rem 0.35rem;border-radius:4px;transition:color .15s,background .15s;flex-shrink:0;}
+    .cat-del-btn:hover{color:var(--danger);background:rgba(255,92,92,0.1);}
+    .cat-add-row{display:flex;gap:0.5rem;margin-top:0.8rem;}
+    .cat-add-row input{flex:1;padding:0.45rem 0.6rem;font-size:0.82rem;}
+    .cat-add-row .icon-input{width:52px;flex-shrink:0;text-align:center;}
+    .cat-add-btn{background:var(--accent);color:#0f0f0f;border:none;font-family:'Syne',sans-serif;font-weight:700;font-size:0.8rem;padding:0.45rem 0.8rem;border-radius:8px;cursor:pointer;white-space:nowrap;flex-shrink:0;}
+    .cat-add-btn:hover{opacity:0.85;}
 
-    @media (max-width: 640px) { .layout { grid-template-columns: 1fr; } }
+    @media(max-width:640px){.layout{grid-template-columns:1fr;}}
   </style>
 </head>
 <body>
 
-<header>
-  <h1>Expense <span>Tracker</span></h1>
-  <div id="total-badge">Total: RM 0.00</div>
-</header>
+<!-- ── Auth Screen ─────────────────────────────────── -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <h1>Expense <span>Tracker</span></h1>
+    <p style="color:var(--muted);font-size:0.85rem;margin-top:0.3rem;">Track your spending, stay in control.</p>
 
-<div class="layout">
-  <aside class="sidebar">
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="showTab('login')">Login</button>
+      <button class="auth-tab" onclick="showTab('register')">Register</button>
+    </div>
 
-    <!-- Add Expense -->
-    <div class="card">
-      <div class="card-title">Add Expense</div>
-      <div class="form-group"><label>Title</label><input type="text" id="title" placeholder="e.g. Lunch"/></div>
-      <div class="form-group"><label>Amount (RM)</label><input type="number" id="amount" placeholder="0.00" min="0" step="0.01"/></div>
-      <div class="form-group">
-        <label>Category</label>
-        <select id="category">
-          <option value="Food">🍜 Food</option>
-          <option value="Transport">🚗 Transport</option>
-          <option value="Bills">💡 Bills</option>
-          <option value="Other">📦 Other</option>
-        </select>
+    <div id="auth-error" class="auth-error"></div>
+
+    <!-- Login form -->
+    <div id="login-form">
+      <div class="form-group"><label>Email</label><input type="email" id="login-email" placeholder="you@example.com"/></div>
+      <div class="form-group"><label>Password</label><input type="password" id="login-password" placeholder="••••••"/></div>
+      <button class="btn-primary" id="login-btn" onclick="handleLogin()">Login</button>
+    </div>
+
+    <!-- Register form -->
+    <div id="register-form" style="display:none">
+      <div class="form-group"><label>Name</label><input type="text" id="reg-name" placeholder="Your name"/></div>
+      <div class="form-group"><label>Email</label><input type="email" id="reg-email" placeholder="you@example.com"/></div>
+      <div class="form-group"><label>Password</label><input type="password" id="reg-password" placeholder="Min 6 characters"/></div>
+      <button class="btn-primary" id="register-btn" onclick="handleRegister()">Create Account</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── App Screen ──────────────────────────────────── -->
+<div id="app-screen">
+  <header>
+    <h1>Expense <span>Tracker</span></h1>
+    <div class="header-right">
+      <span id="user-name"></span>
+      <div id="total-badge">Total: RM 0.00</div>
+      <button id="logout-btn" onclick="handleLogout()">Logout</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+
+      <!-- Add Expense -->
+      <div class="card">
+        <div class="card-title">Add Expense</div>
+        <div class="form-group"><label>Title</label><input type="text" id="title" placeholder="e.g. Lunch"/></div>
+        <div class="form-group"><label>Amount (RM)</label><input type="number" id="amount" placeholder="0.00" min="0" step="0.01"/></div>
+        <div class="form-group">
+          <label>Category</label>
+          <select id="category">
+            <option value="">Loading categories...</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Date</label><input type="date" id="date"/></div>
+        <div class="form-group"><label>Notes (optional)</label><input type="text" id="notes" placeholder="Any details..."/></div>
+        <button class="btn-primary" id="add-btn" onclick="handleAdd()">+ Add Expense</button>
       </div>
-      <div class="form-group"><label>Date</label><input type="date" id="date"/></div>
-      <button id="add-btn">+ Add Expense</button>
-    </div>
 
-    <!-- Date Range Filter -->
-    <div class="card">
-      <div class="card-title">Filter by Date</div>
-      <div class="date-row">
-        <div id="form-group-date"><label>From</label><input type="date" id="from-date"/></div>
-        <div id="form-group-date"><label>To</label><input type="date" id="to-date"/></div>
+      <!-- Date Filter -->
+      <div class="card">
+        <div class="card-title">Filter by Date</div>
+        <div class="date-row">
+          <div class="form-group"><label>From</label><input type="date" id="from-date"/></div>
+          <div class="form-group"><label>To</label><input type="date" id="to-date"/></div>
+        </div>
+        <button class="btn-outline-info" onclick="applyDateFilter()">Apply Filter</button>
+        <button class="btn-clear" onclick="clearDateFilter()">Clear</button>
       </div>
-      <button id="filter-btn">Apply Filter</button>
-      <button id="clear-filter">Clear</button>
-    </div>
 
-    <!-- Summary -->
-    <div class="card">
-      <div class="card-title">Summary</div>
-      <div id="summary-list"><p class="empty-state">No data</p></div>
-    </div>
+      <!-- Summary -->
+      <div class="card">
+        <div class="card-title">Summary</div>
+        <div id="summary-list"><p class="empty-state">No data</p></div>
+      </div>
 
-    <!-- Export -->
-    <div class="card">
-      <div class="card-title">Export</div>
-      <button id="export-btn">⬇ Download CSV</button>
-    </div>
+      <!-- Manage Categories -->
+      <div class="card">
+        <div class="card-title">Manage Categories</div>
+        <div id="cat-list"><p class="empty-state">Loading...</p></div>
+        <div class="cat-add-row">
+          <input type="text" id="cat-icon" class="icon-input" placeholder="🍜" maxlength="2"/>
+          <input type="text" id="cat-name" placeholder="Category name"/>
+          <button class="cat-add-btn" onclick="handleAddCategory()">Add</button>
+        </div>
+      </div>
 
-  </aside>
+      <!-- Export -->
+      <div class="card">
+        <div class="card-title">Export</div>
+        <button class="btn-export" onclick="handleExport()">⬇ Download CSV</button>
+      </div>
 
-  <main>
-    <div class="filter-bar">
-      <button class="filter-btn active" data-cat="all">All</button>
-      <button class="filter-btn" data-cat="Food">Food</button>
-      <button class="filter-btn" data-cat="Transport">Transport</button>
-      <button class="filter-btn" data-cat="Bills">Bills</button>
-      <button class="filter-btn" data-cat="Other">Other</button>
-    </div>
-    <div id="expense-list"></div>
-  </main>
+    </aside>
+
+    <main>
+      <div class="filter-bar" id="filter-bar">
+        <button class="filter-btn active" data-cat="all">All</button>
+        <!-- Category filter buttons added dynamically -->
+      </div>
+      <div id="expense-list"></div>
+    </main>
+  </div>
 </div>
 
 <!-- Edit Modal -->
@@ -163,17 +232,13 @@
     <div class="form-group"><label>Amount (RM)</label><input type="number" id="edit-amount" step="0.01"/></div>
     <div class="form-group">
       <label>Category</label>
-      <select id="edit-category">
-        <option value="Food">🍜 Food</option>
-        <option value="Transport">🚗 Transport</option>
-        <option value="Bills">💡 Bills</option>
-        <option value="Other">📦 Other</option>
-      </select>
+      <select id="edit-category"></select>
     </div>
     <div class="form-group"><label>Date</label><input type="date" id="edit-date"/></div>
+    <div class="form-group"><label>Notes</label><input type="text" id="edit-notes"/></div>
     <div class="modal-actions">
-      <button id="cancel-edit-btn">Cancel</button>
-      <button id="save-edit-btn">Save Changes</button>
+      <button id="cancel-edit-btn" onclick="closeModal()">Cancel</button>
+      <button id="save-edit-btn" onclick="handleSaveEdit()">Save Changes</button>
     </div>
   </div>
 </div>
@@ -181,74 +246,351 @@
 <div class="toast" id="toast"></div>
 
 <script>
-  const API = 'http://localhost:3000';
+  // ── Config ────────────────────────────────────────────────
+  const API = CONFIG.API; // loaded from config.js — auto-switches local vs prod
 
-  const CAT_STYLE = {
-    food:      { color: '#f1a335', bg: 'rgba(241,163,53,0.12)' },
-    transport: { color: '#35c8f1', bg: 'rgba(53,200,241,0.12)' },
-    bills:     { color: '#a335f1', bg: 'rgba(163,53,241,0.12)' },
-    other:     { color: '#f13576', bg: 'rgba(241,53,118,0.12)' },
-  };
-  function catStyle(cat) { return CAT_STYLE[cat.toLowerCase()] || CAT_STYLE.other; }
+  // ── State ─────────────────────────────────────────────────
+  let token        = localStorage.getItem('token') || null;
+  let currentUser  = JSON.parse(localStorage.getItem('user') || 'null');
+  let categories   = [];
+  let activeFilter = 'all';
+  let dateFrom     = '';
+  let dateTo       = '';
 
-  function showToast(msg) {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 2500);
+  // ── Auth helpers ──────────────────────────────────────────
+
+  // All API calls go through this — it automatically adds the token header
+  async function apiFetch(path, options = {}) {
+    const res = await fetch(`${API}${path}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,   // ← JWT token sent here
+        ...(options.headers || {}),
+      },
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || 'Request failed');
+    return data;
   }
 
-  document.getElementById('date').valueAsDate = new Date();
+  // ── Auth tab toggle ───────────────────────────────────────
+  function showTab(tab) {
+    document.getElementById('login-form').style.display    = tab === 'login'    ? 'block' : 'none';
+    document.getElementById('register-form').style.display = tab === 'register' ? 'block' : 'none';
+    document.querySelectorAll('.auth-tab').forEach((b, i) => {
+      b.classList.toggle('active', (i === 0 && tab === 'login') || (i === 1 && tab === 'register'));
+    });
+    hideAuthError();
+  }
 
-  // ── State ──────────────────────────────────────────────────
-  let activeFilter = 'all';
-  let activeDateFrom = '';
-  let activeDateTo   = '';
+  function showAuthError(msg) {
+    const el = document.getElementById('auth-error');
+    el.textContent = msg;
+    el.classList.add('show');
+  }
+
+  function hideAuthError() {
+    document.getElementById('auth-error').classList.remove('show');
+  }
+
+  // ── Register ──────────────────────────────────────────────
+  async function handleRegister() {
+    const name     = document.getElementById('reg-name').value.trim();
+    const email    = document.getElementById('reg-email').value.trim();
+    const password = document.getElementById('reg-password').value;
+    hideAuthError();
+
+    try {
+      const data = await fetch(`${API}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password }),
+      }).then(async r => {
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error?.message || 'Registration failed');
+        return d;
+      });
+
+      saveSession(data);
+      startApp();
+    } catch (err) {
+      showAuthError(err.message);
+    }
+  }
+
+  // ── Login ─────────────────────────────────────────────────
+  async function handleLogin() {
+    const email    = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value;
+    hideAuthError();
+
+    try {
+      const data = await fetch(`${API}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      }).then(async r => {
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error?.message || 'Login failed');
+        return d;
+      });
+
+      saveSession(data);
+      startApp();
+    } catch (err) {
+      showAuthError(err.message);
+    }
+  }
+
+  function saveSession(data) {
+    token       = data.token;
+    currentUser = data.user;
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(currentUser));
+  }
+
+  // ── Logout ────────────────────────────────────────────────
+  function handleLogout() {
+    token       = null;
+    currentUser = null;
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    document.getElementById('app-screen').style.display  = 'none';
+    document.getElementById('auth-screen').style.display = 'flex';
+  }
+
+  // ── Start app after login ─────────────────────────────────
+  async function startApp() {
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('app-screen').style.display  = 'block';
+    document.getElementById('user-name').textContent     = `Hi, ${currentUser.name}`;
+    document.getElementById('date').valueAsDate          = new Date();
+    await loadCategories();
+    await refresh();
+  }
+
+  // ── Categories ────────────────────────────────────────────
+  async function loadCategories() {
+    categories = await apiFetch('/categories');
+
+    // Populate add form dropdown
+    const sel = document.getElementById('category');
+    sel.innerHTML = categories.map(c =>
+      `<option value="${c.id}">${c.icon || ''} ${c.name}</option>`
+    ).join('');
+
+    // Populate edit modal dropdown
+    const editSel = document.getElementById('edit-category');
+    editSel.innerHTML = sel.innerHTML;
+
+    // Render the manage categories list
+    renderCategoryList();
+
+    // Add category filter buttons (after "All")
+    const bar = document.getElementById('filter-bar');
+    bar.innerHTML = `<button class="filter-btn active" data-cat="all" onclick="setFilter('all', this)">All</button>`;
+    categories.forEach(c => {
+      const btn = document.createElement('button');
+      btn.className   = 'filter-btn';
+      btn.textContent = `${c.icon || ''} ${c.name}`;
+      btn.dataset.cat = c.name;
+      btn.onclick     = () => setFilter(c.name, btn);
+      bar.appendChild(btn);
+    });
+  }
+
+  // ── Category filter ───────────────────────────────────────
+  function setFilter(cat, btn) {
+    activeFilter = cat;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    refresh();
+  }
+
+  // ── Date filter ───────────────────────────────────────────
+  function applyDateFilter() {
+    dateFrom = document.getElementById('from-date').value;
+    dateTo   = document.getElementById('to-date').value;
+    refresh();
+  }
+
+  function clearDateFilter() {
+    dateFrom = dateTo = '';
+    document.getElementById('from-date').value = '';
+    document.getElementById('to-date').value   = '';
+    refresh();
+  }
 
   // ── API calls ─────────────────────────────────────────────
-
-  async function fetchExpenses() {
-    let url = `${API}/expenses?`;
-    if (activeFilter !== 'all') url += `category=${activeFilter}&`;
-    if (activeDateFrom) url += `from=${activeDateFrom}&`;
-    if (activeDateTo)   url += `to=${activeDateTo}&`;
-    const res = await fetch(url);
-    return res.json();
+  function buildQuery() {
+    let q = '?';
+    if (activeFilter !== 'all') q += `category=${activeFilter}&`;
+    if (dateFrom) q += `from=${dateFrom}&`;
+    if (dateTo)   q += `to=${dateTo}&`;
+    return q;
   }
 
-  async function fetchSummary() {
-    let url = `${API}/expenses/summary?`;
-    if (activeDateFrom) url += `from=${activeDateFrom}&`;
-    if (activeDateTo)   url += `to=${activeDateTo}&`;
-    const res = await fetch(url);
-    return res.json();
+  async function refresh() {
+    const [expenses, summary] = await Promise.all([
+      apiFetch(`/expenses${buildQuery()}`),
+      apiFetch(`/expenses/summary${buildQuery()}`),
+    ]);
+    renderExpenses(expenses);
+    renderSummary(summary);
   }
 
-  async function addExpense(data) {
-    const res = await fetch(`${API}/expenses`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
+  // ── Add expense ───────────────────────────────────────────
+  async function handleAdd() {
+    const title       = document.getElementById('title').value.trim();
+    const amount      = document.getElementById('amount').value;
+    const category_id = document.getElementById('category').value;
+    const date        = document.getElementById('date').value;
+    const notes       = document.getElementById('notes').value.trim();
+
+    if (!title || !amount || !date) { showToast('⚠️ Fill in all required fields'); return; }
+
+    try {
+      await apiFetch('/expenses', {
+        method: 'POST',
+        body: JSON.stringify({ title, amount, category_id, date, notes }),
+      });
+      showToast('✅ Expense added!');
+      document.getElementById('title').value  = '';
+      document.getElementById('amount').value = '';
+      document.getElementById('notes').value  = '';
+      document.getElementById('date').valueAsDate = new Date();
+      refresh();
+    } catch (err) {
+      showToast(`⚠️ ${err.message}`);
+    }
+  }
+
+  // ── Delete ────────────────────────────────────────────────
+  window.handleDelete = async (id) => {
+    try {
+      await apiFetch(`/expenses/${id}`, { method: 'DELETE' });
+      showToast('🗑️ Deleted');
+      refresh();
+    } catch (err) {
+      showToast(`⚠️ ${err.message}`);
+    }
+  };
+
+  // ── Edit modal ────────────────────────────────────────────
+  window.openEdit = (id, title, amount, categoryId, date, notes) => {
+    document.getElementById('edit-id').value       = id;
+    document.getElementById('edit-title').value    = title;
+    document.getElementById('edit-amount').value   = amount;
+    document.getElementById('edit-category').value = categoryId;
+    document.getElementById('edit-date').value     = date;
+    document.getElementById('edit-notes').value    = notes || '';
+    document.getElementById('edit-modal').classList.remove('hidden');
+  };
+
+  function closeModal() {
+    document.getElementById('edit-modal').classList.add('hidden');
+  }
+
+  async function handleSaveEdit() {
+    const id          = document.getElementById('edit-id').value;
+    const title       = document.getElementById('edit-title').value.trim();
+    const amount      = document.getElementById('edit-amount').value;
+    const category_id = document.getElementById('edit-category').value;
+    const date        = document.getElementById('edit-date').value;
+    const notes       = document.getElementById('edit-notes').value.trim();
+
+    if (!title || !amount || !date) { showToast('⚠️ Fill in all fields'); return; }
+
+    try {
+      await apiFetch(`/expenses/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ title, amount, category_id, date, notes }),
+      });
+      closeModal();
+      showToast('✏️ Updated!');
+      refresh();
+    } catch (err) {
+      showToast(`⚠️ ${err.message}`);
+    }
+  }
+
+  // ── Add category ──────────────────────────────────────────
+  async function handleAddCategory() {
+    const name = document.getElementById('cat-name').value.trim();
+    const icon = document.getElementById('cat-icon').value.trim();
+    if (!name) { showToast('⚠️ Enter a category name'); return; }
+
+    try {
+      await apiFetch('/categories', {
+        method: 'POST',
+        body: JSON.stringify({ name, icon }),
+      });
+      document.getElementById('cat-name').value = '';
+      document.getElementById('cat-icon').value = '';
+      showToast('✅ Category added!');
+      await loadCategories(); // refresh dropdowns + filter bar
+      refresh();
+    } catch (err) {
+      showToast(`⚠️ ${err.message}`);
+    }
+  }
+
+  // ── Delete category ───────────────────────────────────────
+  window.handleDeleteCategory = async (id) => {
+    try {
+      await apiFetch(`/categories/${id}`, { method: 'DELETE' });
+      showToast('🗑️ Category deleted');
+      await loadCategories();
+      refresh();
+    } catch (err) {
+      showToast(`⚠️ ${err.message}`); // shows "X expenses use this category" if blocked
+    }
+  };
+
+  // ── Render category list ──────────────────────────────────
+  function renderCategoryList() {
+    const el = document.getElementById('cat-list');
+    if (!categories.length) { el.innerHTML = '<p class="empty-state">No categories yet</p>'; return; }
+    el.innerHTML = categories.map(c => `
+      <div class="cat-manage-row">
+        <span>${c.icon || ''}</span>
+        <span class="cat-manage-name">${c.name}</span>
+        <button class="cat-del-btn" onclick="handleDeleteCategory(${c.id})" title="Delete">✕</button>
+      </div>
+    `).join('');
+  }
+
+  // ── Export ────────────────────────────────────────────────
+  async function handleExport() {
+    // Export needs the token too — build URL and fetch as blob
+    const url = `${API}/expenses/export${buildQuery()}`;
+    const res = await fetch(url, {
+      headers: { 'Authorization': `Bearer ${token}` },
     });
-    return res.json();
+    const blob = await res.blob();
+    const a    = document.createElement('a');
+    a.href     = URL.createObjectURL(blob);
+    a.download = 'expenses.csv';
+    a.click();
+    showToast('⬇ Downloading...');
   }
 
-  // NEW: PUT request to edit an expense
-  async function editExpense(id, data) {
-    const res = await fetch(`${API}/expenses/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    return res.json();
-  }
+  // ── Render helpers ────────────────────────────────────────
+  const CAT_COLORS = [
+    { color:'#f1a335', bg:'rgba(241,163,53,0.12)' },
+    { color:'#35c8f1', bg:'rgba(53,200,241,0.12)' },
+    { color:'#a335f1', bg:'rgba(163,53,241,0.12)' },
+    { color:'#f13576', bg:'rgba(241,53,118,0.12)' },
+    { color:'#35f1a3', bg:'rgba(53,241,163,0.12)' },
+  ];
 
-  async function deleteExpense(id) {
-    const res = await fetch(`${API}/expenses/${id}`, { method: 'DELETE' });
-    return res.json();
+  // Give each category a consistent color based on its name
+  function catStyle(name) {
+    let hash = 0;
+    for (const c of (name || '')) hash = c.charCodeAt(0) + ((hash << 5) - hash);
+    return CAT_COLORS[Math.abs(hash) % CAT_COLORS.length];
   }
-
-  // ── Render ────────────────────────────────────────────────
 
   function renderExpenses(list) {
     const el = document.getElementById('expense-list');
@@ -257,14 +599,16 @@
       const s = catStyle(e.category);
       return `
         <div class="expense-item">
-          <span class="cat-pill" style="color:${s.color};background:${s.bg}">${e.category}</span>
+          <span class="cat-pill" style="color:${s.color};background:${s.bg}">
+            ${e.category_icon || ''} ${e.category}
+          </span>
           <div class="expense-info">
             <div class="expense-title">${e.title}</div>
-            <div class="expense-date">${e.date}</div>
+            <div class="expense-date">${e.date}${e.notes ? ' · ' + e.notes : ''}</div>
           </div>
           <div class="expense-amount">RM ${e.amount.toFixed(2)}</div>
-          <button class="action-btn edit" onclick="openEdit(${e.id},'${e.title}',${e.amount},'${e.category}','${e.date}')" title="Edit">✎</button>
-          <button class="action-btn del"  onclick="handleDelete(${e.id})" title="Delete">✕</button>
+          <button class="action-btn edit" onclick="openEdit(${e.id},'${e.title.replace(/'/g,"\\'")}',${e.amount},${e.category_id},'${e.date}','${(e.notes||'').replace(/'/g,"\\'")}')">✎</button>
+          <button class="action-btn del"  onclick="handleDelete(${e.id})">✕</button>
         </div>`;
     }).join('');
   }
@@ -277,110 +621,25 @@
     el.innerHTML = summary.map(s => {
       const style = catStyle(s.category);
       return `<div class="summary-row">
-        <span><span class="cat-dot" style="background:${style.color}"></span>${s.category}</span>
+        <span><span class="cat-dot" style="background:${style.color}"></span>${s.icon || ''} ${s.category}</span>
         <span class="summary-amount">RM ${s.total.toFixed(2)}</span>
       </div>`;
     }).join('');
   }
 
-  async function refresh() {
-    const [list, summary] = await Promise.all([fetchExpenses(), fetchSummary()]);
-    renderExpenses(list);
-    renderSummary(summary);
+  // ── Toast ─────────────────────────────────────────────────
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
   }
 
-  // ── Add ───────────────────────────────────────────────────
-  document.getElementById('add-btn').addEventListener('click', async () => {
-    const title = document.getElementById('title').value.trim();
-    const amount = document.getElementById('amount').value;
-    const category = document.getElementById('category').value;
-    const date = document.getElementById('date').value;
-    if (!title || !amount || !date) { showToast('⚠️ Fill in all fields'); return; }
-    await addExpense({ title, amount, category, date });
-    showToast('✅ Expense added!');
-    document.getElementById('title').value = '';
-    document.getElementById('amount').value = '';
-    document.getElementById('date').valueAsDate = new Date();
-    refresh();
-  });
-
-  // ── Delete ────────────────────────────────────────────────
-  window.handleDelete = async (id) => {
-    await deleteExpense(id);
-    showToast('🗑️ Deleted');
-    refresh();
-  };
-
-  // ── Edit modal ────────────────────────────────────────────
-  window.openEdit = (id, title, amount, category, date) => {
-    document.getElementById('edit-id').value       = id;
-    document.getElementById('edit-title').value    = title;
-    document.getElementById('edit-amount').value   = amount;
-    document.getElementById('edit-category').value = category;
-    document.getElementById('edit-date').value     = date;
-    document.getElementById('edit-modal').classList.remove('hidden');
-  };
-
-  document.getElementById('cancel-edit-btn').addEventListener('click', () => {
-    document.getElementById('edit-modal').classList.add('hidden');
-  });
-
-  document.getElementById('save-edit-btn').addEventListener('click', async () => {
-    const id       = document.getElementById('edit-id').value;
-    const title    = document.getElementById('edit-title').value.trim();
-    const amount   = document.getElementById('edit-amount').value;
-    const category = document.getElementById('edit-category').value;
-    const date     = document.getElementById('edit-date').value;
-    if (!title || !amount || !date) { showToast('⚠️ Fill in all fields'); return; }
-    await editExpense(id, { title, amount, category, date });
-    document.getElementById('edit-modal').classList.add('hidden');
-    showToast('✏️ Updated!');
-    refresh();
-  });
-
-  // ── Category filter buttons ───────────────────────────────
-  document.querySelectorAll('.filter-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      activeFilter = btn.dataset.cat;
-      refresh();
-    });
-  });
-
-  // ── Date range filter ─────────────────────────────────────
-  document.getElementById('filter-btn').addEventListener('click', () => {
-    activeDateFrom = document.getElementById('from-date').value;
-    activeDateTo   = document.getElementById('to-date').value;
-    const btn = document.getElementById('filter-btn');
-    if (activeDateFrom || activeDateTo) btn.classList.add('date-active');
-    refresh();
-  });
-
-  document.getElementById('clear-filter').addEventListener('click', () => {
-    activeDateFrom = '';
-    activeDateTo   = '';
-    document.getElementById('from-date').value = '';
-    document.getElementById('to-date').value   = '';
-    document.getElementById('filter-btn').classList.remove('date-active');
-    refresh();
-  });
-
-  // ── CSV Export ────────────────────────────────────────────
-  document.getElementById('export-btn').addEventListener('click', () => {
-    // Build URL with current filters so export matches what you see
-    let url = `${API}/expenses/export?`;
-    if (activeFilter !== 'all') url += `category=${activeFilter}&`;
-    if (activeDateFrom) url += `from=${activeDateFrom}&`;
-    if (activeDateTo)   url += `to=${activeDateTo}&`;
-
-    // Opening the URL triggers the file download directly
-    window.open(url, '_blank');
-    showToast('⬇ Downloading CSV...');
-  });
-
-  // ── Init ──────────────────────────────────────────────────
-  refresh();
+  // ── Boot ──────────────────────────────────────────────────
+  // If token exists in localStorage, skip the login screen
+  if (token && currentUser) {
+    startApp();
+  }
 </script>
 </body>
 </html>
