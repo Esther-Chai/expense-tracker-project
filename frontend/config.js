@@ -13,6 +13,6 @@
 
 const CONFIG = {
   API: window.location.hostname === 'localhost'
-    ? 'http://localhost:3000'           // local dev
-    : 'https://YOUR_RAILWAY_URL.railway.app',  // ← replace with your Railway URL
+    ? 'http://localhost:3000'
+    : 'https://sunny-freedom-production-936d.up.railway.app',
 };

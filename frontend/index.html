@@ -444,7 +444,7 @@
   async function handleAdd() {
     const title       = document.getElementById('title').value.trim();
     const amount      = document.getElementById('amount').value;
-    const category_id = document.getElementById('category').value;
+    const categoryId  = document.getElementById('category').value;
     const date        = document.getElementById('date').value;
     const notes       = document.getElementById('notes').value.trim();
 
@@ -453,7 +453,7 @@
     try {
       await apiFetch('/expenses', {
         method: 'POST',
-        body: JSON.stringify({ title, amount, category_id, date, notes }),
+        body: JSON.stringify({ title, amount, categoryId, date, notes }),
       });
       showToast('✅ Expense added!');
       document.getElementById('title').value  = '';
@@ -496,7 +496,7 @@
     const id          = document.getElementById('edit-id').value;
     const title       = document.getElementById('edit-title').value.trim();
     const amount      = document.getElementById('edit-amount').value;
-    const category_id = document.getElementById('edit-category').value;
+    const categoryId  = document.getElementById('edit-category').value;
     const date        = document.getElementById('edit-date').value;
     const notes       = document.getElementById('edit-notes').value.trim();
 
@@ -505,7 +505,7 @@
     try {
       await apiFetch(`/expenses/${id}`, {
         method: 'PUT',
-        body: JSON.stringify({ title, amount, category_id, date, notes }),
+        body: JSON.stringify({ title, amount, categoryId, date, notes }),
       });
       closeModal();
       showToast('✏️ Updated!');
@@ -596,25 +596,27 @@
     const el = document.getElementById('expense-list');
     if (!list.length) { el.innerHTML = '<p class="empty-state">No expenses found</p>'; return; }
     el.innerHTML = list.map(e => {
-      const s = catStyle(e.category);
+      const catName = e.category?.name || '';
+      const catIcon = e.category?.icon || '';
+      const s = catStyle(catName);
       return `
         <div class="expense-item">
           <span class="cat-pill" style="color:${s.color};background:${s.bg}">
-            ${e.category_icon || ''} ${e.category}
+            ${catIcon} ${catName}
           </span>
           <div class="expense-info">
             <div class="expense-title">${e.title}</div>
             <div class="expense-date">${e.date}${e.notes ? ' · ' + e.notes : ''}</div>
           </div>
-          <div class="expense-amount">RM ${e.amount.toFixed(2)}</div>
-          <button class="action-btn edit" onclick="openEdit(${e.id},'${e.title.replace(/'/g,"\\'")}',${e.amount},${e.category_id},'${e.date}','${(e.notes||'').replace(/'/g,"\\'")}')">✎</button>
+          <div class="expense-amount">RM ${parseFloat(e.amount).toFixed(2)}</div>
+          <button class="action-btn edit" onclick="openEdit(${e.id},'${e.title.replace(/'/g,"\\'")}',${e.amount},${e.categoryId},'${e.date}','${(e.notes||'').replace(/'/g,"\\'")}')">✎</button>
           <button class="action-btn del"  onclick="handleDelete(${e.id})">✕</button>
         </div>`;
     }).join('');
   }
 
   function renderSummary(summary) {
-    const total = summary.reduce((s, x) => s + x.total, 0);
+    const total = summary.reduce((s, x) => s + parseFloat(x.total), 0);
     document.getElementById('total-badge').textContent = `Total: RM ${total.toFixed(2)}`;
     const el = document.getElementById('summary-list');
     if (!summary.length) { el.innerHTML = '<p class="empty-state">No data</p>'; return; }
@@ -622,7 +624,7 @@
       const style = catStyle(s.category);
       return `<div class="summary-row">
         <span><span class="cat-dot" style="background:${style.color}"></span>${s.icon || ''} ${s.category}</span>
-        <span class="summary-amount">RM ${s.total.toFixed(2)}</span>
+        <span class="summary-amount">RM ${parseFloat(s.total).toFixed(2)}</span>
       </div>`;
     }).join('');
   }

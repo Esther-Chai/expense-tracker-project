@@ -1,0 +1,50 @@
+// prisma/schema.prisma
+// This file defines your database structure.
+// Prisma reads this and generates a type-safe client for you.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")  // reads from .env file
+}
+
+model User {
+  id           Int        @id @default(autoincrement())
+  email        String     @unique
+  passwordHash String
+  name         String
+  createdAt    DateTime   @default(now())
+
+  expenses     Expense[]
+  categories   Category[]
+}
+
+model Category {
+  id       Int       @id @default(autoincrement())
+  name     String
+  icon     String?
+  userId   Int
+  user     User      @relation(fields: [userId], references: [id])
+
+  expenses Expense[]
+
+  @@unique([name, userId])  // same user can't have two categories with same name
+}
+
+model Expense {
+  id         Int      @id @default(autoincrement())
+  title      String
+  amount     Float
+  date       String
+  notes      String?
+  createdAt  DateTime @default(now())
+
+  userId     Int
+  user       User     @relation(fields: [userId], references: [id])
+
+  categoryId Int
+  category   Category @relation(fields: [categoryId], references: [id])
+}

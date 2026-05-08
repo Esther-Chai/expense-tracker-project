@@ -1,72 +1,98 @@
 const express          = require('express');
 const router           = express.Router();
-const db               = require('../database');
+const prisma           = require('../database');
 const { createError }  = require('../middleware/errorHandler');
 const { authenticate } = require('../middleware/authenticate');
 
-// All expense routes require a valid JWT token
 router.use(authenticate);
 
-// GET /expenses — supports ?category ?from ?to
-router.get('/', (req, res, next) => {
+// GET /expenses — supports ?category ?from ?to filters
+router.get('/', async (req, res, next) => {
   try {
     const { category, from, to } = req.query;
-    let query  = `
-      SELECT e.id, e.title, e.amount, e.date, e.notes, e.created_at,
-             c.name AS category, c.icon AS category_icon
-      FROM   expenses e
-      JOIN   categories c ON e.category_id = c.id
-      WHERE  e.user_id = ?`;
-    const params = [req.user.id]; // real user ID from token
 
-    if (category) { query += ' AND LOWER(c.name) = LOWER(?)'; params.push(category); }
-    if (from)     { query += ' AND e.date >= ?'; params.push(from); }
-    if (to)       { query += ' AND e.date <= ?'; params.push(to); }
-    query += ' ORDER BY e.date DESC, e.created_at DESC';
+    // Build Prisma where clause dynamically
+    const where = {
+      userId: req.user.id,
+      ...(category && { category: { name: { equals: category, mode: 'insensitive' } } }),
+      ...(from || to) && {
+        date: {
+          ...(from && { gte: from }),
+          ...(to   && { lte: to   }),
+        },
+      },
+    };
 
-    res.json(db.prepare(query).all(...params));
+    const expenses = await prisma.expense.findMany({
+      where,
+      include:  { category: true },  // joins category so we get name + icon
+      orderBy:  [{ date: 'desc' }, { createdAt: 'desc' }],
+    });
+
+    res.json(expenses);
   } catch (err) { next(err); }
 });
 
 // GET /expenses/summary
-router.get('/summary', (req, res, next) => {
+router.get('/summary', async (req, res, next) => {
   try {
     const { from, to } = req.query;
-    let query = `
-      SELECT c.name AS category, c.icon AS icon,
-             ROUND(SUM(e.amount), 2) AS total, COUNT(e.id) AS count
-      FROM   expenses e
-      JOIN   categories c ON e.category_id = c.id
-      WHERE  e.user_id = ?`;
-    const params = [req.user.id];
 
-    if (from) { query += ' AND e.date >= ?'; params.push(from); }
-    if (to)   { query += ' AND e.date <= ?'; params.push(to); }
-    query += ' GROUP BY c.id ORDER BY total DESC';
+    const where = {
+      userId: req.user.id,
+      ...(from || to) && {
+        date: {
+          ...(from && { gte: from }),
+          ...(to   && { lte: to   }),
+        },
+      },
+    };
 
-    res.json(db.prepare(query).all(...params));
+    // Prisma groupBy to total per category
+    const grouped = await prisma.expense.groupBy({
+      by:     ['categoryId'],
+      where,
+      _sum:   { amount: true },
+      _count: { id: true },
+    });
+
+    // Fetch category details for each group
+    const summary = await Promise.all(
+      grouped.map(async (g) => {
+        const cat = await prisma.category.findUnique({ where: { id: g.categoryId } });
+        return {
+          category: cat.name,
+          icon:     cat.icon,
+          total:    Math.round(g._sum.amount * 100) / 100,
+          count:    g._count.id,
+        };
+      })
+    );
+
+    res.json(summary.sort((a, b) => b.total - a.total));
   } catch (err) { next(err); }
 });
 
-// GET /expenses/export
-router.get('/export', (req, res, next) => {
+// GET /expenses/export — CSV download
+router.get('/export', async (req, res, next) => {
   try {
     const { category, from, to } = req.query;
-    let query = `
-      SELECT e.id, e.title, e.amount, e.date, e.notes, c.name AS category
-      FROM   expenses e
-      JOIN   categories c ON e.category_id = c.id
-      WHERE  e.user_id = ?`;
-    const params = [req.user.id];
 
-    if (category) { query += ' AND LOWER(c.name) = LOWER(?)'; params.push(category); }
-    if (from)     { query += ' AND e.date >= ?'; params.push(from); }
-    if (to)       { query += ' AND e.date <= ?'; params.push(to); }
+    const where = {
+      userId: req.user.id,
+      ...(category && { category: { name: { equals: category, mode: 'insensitive' } } }),
+      ...(from || to) && { date: { ...(from && { gte: from }), ...(to && { lte: to }) } },
+    };
 
-    const expenses = db.prepare(query).all(...params);
+    const expenses = await prisma.expense.findMany({
+      where,
+      include: { category: true },
+    });
+
     const csv = [
       'id,title,amount,category,date,notes',
-      ...expenses.map(e => `${e.id},"${e.title}",${e.amount},${e.category},${e.date},"${e.notes || ''}"`)
+      ...expenses.map(e =>
+        `${e.id},"${e.title}",${e.amount},${e.category.name},${e.date},"${e.notes || ''}"`)
     ].join('\n');
 
     res.setHeader('Content-Type', 'text/csv');
@@ -76,88 +102,86 @@ router.get('/export', (req, res, next) => {
 });
 
 // POST /expenses
-router.post('/', (req, res, next) => {
+router.post('/', async (req, res, next) => {
   try {
-    const { title, amount, category_id, date, notes } = req.body;
+    const { title, amount, categoryId, date, notes } = req.body;
 
-    if (!title)       return next(createError(400, 'Title is required'));
-    if (!amount)      return next(createError(400, 'Amount is required'));
-    if (!category_id) return next(createError(400, 'Category is required'));
-    if (!date)        return next(createError(400, 'Date is required'));
+    if (!title)      return next(createError(400, 'Title is required'));
+    if (!amount)     return next(createError(400, 'Amount is required'));
+    if (!categoryId) return next(createError(400, 'Category is required'));
+    if (!date)       return next(createError(400, 'Date is required'));
     if (isNaN(amount) || amount <= 0)
-                      return next(createError(400, 'Amount must be a positive number'));
+                     return next(createError(400, 'Amount must be a positive number'));
 
-    const cat = db.prepare(
-      'SELECT id FROM categories WHERE id = ? AND user_id = ?'
-    ).get(category_id, req.user.id);
+    // Verify category belongs to this user
+    const cat = await prisma.category.findFirst({
+      where: { id: parseInt(categoryId), userId: req.user.id },
+    });
     if (!cat) return next(createError(404, 'Category not found'));
 
-    const result = db.prepare(`
-      INSERT INTO expenses (title, amount, date, notes, user_id, category_id)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(title, parseFloat(amount), date, notes || null, req.user.id, category_id);
+    const expense = await prisma.expense.create({
+      data: {
+        title,
+        amount:     parseFloat(amount),
+        date,
+        notes:      notes || null,
+        userId:     req.user.id,
+        categoryId: parseInt(categoryId),
+      },
+      include: { category: true },
+    });
 
-    const newExpense = db.prepare(`
-      SELECT e.*, c.name AS category, c.icon AS category_icon
-      FROM expenses e JOIN categories c ON e.category_id = c.id
-      WHERE e.id = ?
-    `).get(result.lastInsertRowid);
-
-    res.status(201).json(newExpense);
+    res.status(201).json(expense);
   } catch (err) { next(err); }
 });
 
 // PUT /expenses/:id
-router.put('/:id', (req, res, next) => {
+router.put('/:id', async (req, res, next) => {
   try {
-    const id       = parseInt(req.params.id);
-    const existing = db.prepare(
-      'SELECT * FROM expenses WHERE id = ? AND user_id = ?'
-    ).get(id, req.user.id);
+    const id = parseInt(req.params.id);
+
+    const existing = await prisma.expense.findFirst({
+      where: { id, userId: req.user.id },
+    });
     if (!existing) return next(createError(404, `Expense ${id} not found`));
 
     if (req.body.amount && (isNaN(req.body.amount) || req.body.amount <= 0))
       return next(createError(400, 'Amount must be a positive number'));
 
-    if (req.body.category_id) {
-      const cat = db.prepare(
-        'SELECT id FROM categories WHERE id = ? AND user_id = ?'
-      ).get(req.body.category_id, req.user.id);
+    if (req.body.categoryId) {
+      const cat = await prisma.category.findFirst({
+        where: { id: parseInt(req.body.categoryId), userId: req.user.id },
+      });
       if (!cat) return next(createError(404, 'Category not found'));
     }
 
-    const updated = {
-      title:       req.body.title       || existing.title,
-      amount:      req.body.amount      ? parseFloat(req.body.amount) : existing.amount,
-      date:        req.body.date        || existing.date,
-      notes:       req.body.notes       !== undefined ? req.body.notes : existing.notes,
-      category_id: req.body.category_id || existing.category_id,
-    };
+    const updated = await prisma.expense.update({
+      where: { id },
+      data: {
+        ...(req.body.title      && { title:      req.body.title }),
+        ...(req.body.amount     && { amount:     parseFloat(req.body.amount) }),
+        ...(req.body.date       && { date:       req.body.date }),
+        ...(req.body.notes      !== undefined && { notes: req.body.notes }),
+        ...(req.body.categoryId && { categoryId: parseInt(req.body.categoryId) }),
+      },
+      include: { category: true },
+    });
 
-    db.prepare(`
-      UPDATE expenses SET title=?, amount=?, date=?, notes=?, category_id=?
-      WHERE id=? AND user_id=?
-    `).run(updated.title, updated.amount, updated.date, updated.notes, updated.category_id, id, req.user.id);
-
-    const result = db.prepare(`
-      SELECT e.*, c.name AS category, c.icon AS category_icon
-      FROM expenses e JOIN categories c ON e.category_id = c.id WHERE e.id = ?
-    `).get(id);
-
-    res.json(result);
+    res.json(updated);
   } catch (err) { next(err); }
 });
 
 // DELETE /expenses/:id
-router.delete('/:id', (req, res, next) => {
+router.delete('/:id', async (req, res, next) => {
   try {
-    const id     = parseInt(req.params.id);
-    const exists = db.prepare(
-      'SELECT id FROM expenses WHERE id = ? AND user_id = ?'
-    ).get(id, req.user.id);
-    if (!exists) return next(createError(404, `Expense ${id} not found`));
+    const id = parseInt(req.params.id);
 
-    db.prepare('DELETE FROM expenses WHERE id = ? AND user_id = ?').run(id, req.user.id);
+    const existing = await prisma.expense.findFirst({
+      where: { id, userId: req.user.id },
+    });
+    if (!existing) return next(createError(404, `Expense ${id} not found`));
+
+    await prisma.expense.delete({ where: { id } });
     res.json({ message: `Expense ${id} deleted` });
   } catch (err) { next(err); }
 });
