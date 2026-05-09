@@ -240,6 +240,7 @@ JWT_SECRET="your_secret_here"     # Any long random string
 
 ## 🔮 Future Improvements
 
+- [ ] Cybersecurity Aspects
 - [ ] Monthly budget limits per category
 - [ ] Charts and spending trends (Chart.js)
 - [ ] Recurring expenses
