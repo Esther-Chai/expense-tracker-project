@@ -1,7 +1,18 @@
-# OS files
+node_modules/
+.env
+.env.local
+*.db
+*.sqlite
+*.sqlite3
+
+# Keep prisma/migrations tracked — Railway needs them to run migrate deploy
+# Keep prisma/schema.prisma tracked too
+# Only ignore the generated client
+node_modules/.prisma/
+
+logs/
+*.log
 .DS_Store
 Thumbs.db
-
-# Editor
 .vscode/
 .idea/
