@@ -9,7 +9,11 @@ A full-stack expense tracking web application built with Node.js, Express, Prism
 
 ## 📸 Screenshots
 
-> Add screenshots of your app here after deployment
+<img width="1918" height="870" alt="image" src="https://github.com/user-attachments/assets/05f20141-23eb-470d-aaf8-6994aa7fb7ae" />
+<img width="1828" height="862" alt="image" src="https://github.com/user-attachments/assets/f916a35a-6fff-4f1d-aa36-b6501622c38b" />
+<img width="1918" height="855" alt="image" src="https://github.com/user-attachments/assets/f54c2065-e60c-4754-bd5a-14ddbec933dd" />
+<img width="1310" height="852" alt="image" src="https://github.com/user-attachments/assets/304aa274-2caa-4262-a8c3-0d4aa894256c" />
+
 
 ---
 
